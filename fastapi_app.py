@@ -1,9 +1,12 @@
 """Задания №6, №9 и повышенные №2, №9 лабораторной работы №6."""
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Request
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -39,6 +42,9 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="Задачи", lifespan=lifespan)
+templates = Jinja2Templates(
+    directory=Path(__file__).resolve().parent / "templates"
+)
 
 
 def find_task(task_id: int, session: Session) -> Task:
@@ -51,6 +57,13 @@ def find_task(task_id: int, session: Session) -> Task:
 @app.get("/hello")
 def hello() -> dict[str, str]:
     return {"message": "Привет, FastAPI!"}
+
+
+@app.get("/")
+def task_page(request: Request, session: SessionDependency):
+    """Среднее задание №9: шаблонная страница со списком задач."""
+    tasks = list(session.scalars(select(Task).order_by(Task.id)))
+    return templates.TemplateResponse(request, "tasks.html", {"tasks": tasks})
 
 
 @app.get("/tasks", response_model=list[TaskView])
